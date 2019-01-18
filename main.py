@@ -4,6 +4,7 @@ from app import app
 from db_config import mysql
 from flask import jsonify
 from flask import flash, request, session
+from cache import cache
 
 @app.route('/api/events')
 def get_events():
