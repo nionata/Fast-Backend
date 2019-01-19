@@ -59,7 +59,7 @@ def add_event():
 			cursor = conn.cursor()
 			cursor.execute(sql, data)
 			conn.commit()
-			#run eid thru hash funciton and return the code
+			#function to generate a 4 digit code...push to cache
 			resp = jsonify('Event added successfully')
 			resp.status_code = 200
 			return resp
@@ -99,7 +99,7 @@ def sign_in():
 		_long = _json['long']
 		if _code and _id and _lat and _long:
 			resp = None
-			#(Add hash function code -> eid)
+			#eid = code from cache
 			eid = _code
 			#Check if member has already signed into event
 			if not str(eid) in session:
