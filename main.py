@@ -33,6 +33,19 @@ def get_members():
 	except Exception as e:
 		print(e)
 
+@app.route('/api/member/<id>')
+def get_member(id):
+	print(id)
+	try:
+		cursor = mysql.connect().cursor(pymysql.cursors.DictCursor)
+		cursor.execute("SELECT attendance_id, attendance_time_in, event_name, event_start, event_end, type_name FROM attendance inner join events on attendance_event_id=event_id inner join types on event_type_id=type_id where attendance_member_id=%s" % id)
+		rows = cursor.fetchall()
+		resp = jsonify(rows)
+		resp.status_code = 200
+		return resp
+	except Exception as e:
+		print(e)
+
 @app.route('/api/types')
 def get_types():
 	try:
@@ -110,6 +123,7 @@ def sign_in():
 				#Get the event details
 				conn = mysql.connect()
 				cursor = conn.cursor(pymysql.cursors.DictCursor)
+				#Join...grab event details and attedance details eid + mid on attedance
 				cursor.execute("select event_type_id, event_start, event_end, event_lat, event_long from events where event_start%10000=%s" % _code)
 				rows = cursor.fetchall()
 				if rows:
@@ -121,7 +135,7 @@ def sign_in():
 						if row["event_lat"] == _lat and row["event_long"] == _long:
 							#as long as there isn't an attedance record
 							cursor.execute("update members set member_points=member_points + (select type_points from types where type_id=%s) where member_id=%s" % (row["event_type_id"], _id))
-							cursor.execute("insert into attendance (attendance_event_id, attendance_member_id) values (%s, %s)" % (eid, _id))
+							cursor.execute("insert into attendance (attendance_event_id, attendance_member_id) values (%s, %s)" % (eid, _id)) #time
 							conn.commit()
 							resp = "Successfully signed in"
 							session[eid] = ""
