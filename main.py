@@ -4,7 +4,8 @@ from app import app
 from db_config import mysql
 from flask import jsonify
 from flask import flash, request, session
-from cache import cache
+from functions import toCode, takeTime
+#from cache import cache
 
 @app.route('/api/events')
 def get_events():
@@ -48,7 +49,7 @@ def add_event():
 		_json = request.json
 		_name = _json['name']
 		_type = _json['type']
-		_start = _json['start']
+		_start = _json['start'] if _json['start'] else takeTime()
 		_end = _json['end']
 		_lat = _json['lat']
 		_long = _json['long']
@@ -59,8 +60,11 @@ def add_event():
 			cursor = conn.cursor()
 			cursor.execute(sql, data)
 			conn.commit()
-			#function to generate a 4 digit code...push to cache
-			resp = jsonify('Event added successfully')
+			message = {
+				"message": "Event added successfully",
+				"code": toCode(_start)
+			}
+			resp = jsonify(message)
 			resp.status_code = 200
 			return resp
 		else:
@@ -135,6 +139,8 @@ def sign_in():
 			return not_found
 	except Exception as e:
 		print(e)
+
+#def sign
 
 @app.errorhandler(404)
 def not_found(error=None):
