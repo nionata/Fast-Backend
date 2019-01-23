@@ -7,6 +7,8 @@ from flask import flash, request, session
 from functions import toCode, takeTime
 #from cache import cache
 
+#auth for the admin accs
+
 @app.route('/api/events')
 def get_events():
 	try:
@@ -53,7 +55,7 @@ def add_event():
 		_end = _json['end']
 		_lat = _json['lat']
 		_long = _json['long']
-		if True: #Check inputs
+		if _name and _type and _start and _end and _lat and _long:
 			sql = "INSERT INTO events(event_name, event_type_id, event_start, event_end, event_lat, event_long) VALUES(%s, %s, %s, %s, %s, %s)"
 			data = (_name, _type, _start, _end, _lat, _long)
 			conn = mysql.connect()
@@ -103,14 +105,12 @@ def sign_in():
 		_long = _json['long']
 		if _code and _id and _lat and _long:
 			resp = None
-			#eid = code from cache
-			eid = _code
 			#Check if member has already signed into event
-			if not str(eid) in session:
-				#Get the corresponding event
+			if not str(_code) in session:
+				#Get the event details
 				conn = mysql.connect()
 				cursor = conn.cursor(pymysql.cursors.DictCursor)
-				cursor.execute("select event_type_id, event_start, event_end, event_lat, event_long from events where event_id=%s" % eid)
+				cursor.execute("select event_type_id, event_start, event_end, event_lat, event_long from events where event_start%10000=%s" % _code)
 				rows = cursor.fetchall()
 				if rows:
 					row = rows[0]
@@ -119,6 +119,7 @@ def sign_in():
 					if row["event_start"] <= curr and curr <= row["event_end"]:
 						#Check location (Add function for proximity)
 						if row["event_lat"] == _lat and row["event_long"] == _long:
+							#as long as there isn't an attedance record
 							cursor.execute("update members set member_points=member_points + (select type_points from types where type_id=%s) where member_id=%s" % (row["event_type_id"], _id))
 							cursor.execute("insert into attendance (attendance_event_id, attendance_member_id) values (%s, %s)" % (eid, _id))
 							conn.commit()
