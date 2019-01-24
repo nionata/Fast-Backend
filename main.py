@@ -17,6 +17,18 @@ def get_events():
 	except Exception as e:
 		print(e)
 
+@app.route('/api/event/<id>')
+def get_event(id):
+	try:
+		cursor = mysql.connect().cursor(pymysql.cursors.DictCursor)
+		cursor.execute("SELECT attendance_id, attendance_time_in, member_first_name, member_last_name FROM attendance INNER JOIN members ON attendance_member_id=member_id WHERE attendance_event_id=%s" % id)
+		rows = cursor.fetchall()
+		resp = jsonify(rows)
+		resp.status_code = 200
+		return resp
+	except Exception as e:
+		print(e)
+
 @app.route('/api/members')
 def get_members():
 	try:
@@ -122,7 +134,7 @@ def sign_in():
 					event = rows[0]
 					currTime = takeTime()
 					if event["event_start"] <= currTime and currTime <= event["event_end"]:
-						if event["event_lat"] == _lat and event["event_long"] == _long:
+						if event["event_lat"] == _lat and event["event_long"] == _long: #add proximity
 							cursor.execute("SELECT attendance_time_in FROM attendance WHERE attendance_event_id=%d AND attendance_member_id=%d" % (event['event_id'], _id))
 							rows = cursor.fetchall()
 							if not rows:
@@ -148,8 +160,6 @@ def sign_in():
 			return not_found
 	except Exception as e:
 		print(e)
-
-#def sign
 
 @app.errorhandler(404)
 def not_found(error=None):
