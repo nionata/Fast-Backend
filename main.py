@@ -5,7 +5,7 @@ from flask import jsonify
 from flask import flash, request, session
 from functions import generateCode, takeTime, getTimeout
 from cache import cache
-
+import geopy.distance
 
 @app.route('/api/events')
 def get_events():
@@ -47,7 +47,7 @@ def get_members():
 def get_member(id):
 	try:
 		cursor = mysql.connect().cursor(pymysql.cursors.DictCursor)
-		cursor.execute("SELECT attendance_id, attendance_time_in, event_name, event_start, event_end, type_name FROM attendance inner join events on attendance_event_id=event_id inner join types on event_type_id=type_id where attendance_member_id=%s" % id)
+		cursor.execute("SELECT attendance_id, attendance_time_in, event_name, event_start, event_end, type_name FROM attendance inner join events on attendance_event_id=event_id inner join types on event_type_id=type_id ")
 		rows = cursor.fetchall()
 		resp = jsonify(rows)
 		resp.status_code = 200
@@ -106,7 +106,7 @@ def add_event():
 				"message": "Event added successfully",
 				"code": code
 			}
-			print(cache.get_dict())
+			print(cache.get(code))
 			resp = jsonify(message)
 			resp.status_code = 200
 			return resp
@@ -150,8 +150,9 @@ def sign_in():
 		
 		eventId = cache.get(_code)
 		
-		print(eventId, _code, cache.get_dict())
+		print(eventId, _code,)
 		print(session)
+		print(_lat, _long)
 		
 		if not eventId:
 			return goodResp("This is not a valid event code")
@@ -173,7 +174,11 @@ def sign_in():
 		if not (event["event_start"] <= currTime and currTime <= event["event_end"]):
 			return goodResp("This event is not active")
 				
-		if not (event["event_lat"] == _lat and event["event_long"] == _long): #add proximity
+		userCoords = (_lat, _long)
+		eventCoords = (event["event_lat"], event["event_long"])
+		dist = geopy.distance.vincenty(userCoords, eventCoords).miles
+		print(dist)
+		if not (dist <= 0.068):
 			return goodResp("You are not within the event range")
 				
 		cursor.execute("SELECT attendance_time_in FROM attendance WHERE attendance_event_id=%d AND attendance_member_id=%d" % (eventId, _id))
@@ -203,6 +208,14 @@ def not_found(error=None):
 	}
 	resp = jsonify(message)
 	resp.status_code = 404
+	return resp
+
+@app.after_request
+def add_header(resp):
+	resp.headers.add('Access-Control-Allow-Origin', '*')
+	resp.headers.add('Access-Control-Allow-Credntials', 'true')
+	resp.headers.add('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT')
+	resp.headers.add('Access-Control-Allow-Headers', 'Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers')
 	return resp
 
 if __name__ == "__main__":
