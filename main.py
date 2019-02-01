@@ -1,11 +1,11 @@
 import pymysql
+import geopy.distance
 from app import app
 from db_config import mysql
 from flask import jsonify
 from flask import flash, request, session
 from functions import generateCode, takeTime, getTimeout
 from cache import cache
-import geopy.distance
 
 @app.route('/api/events')
 def get_events():
