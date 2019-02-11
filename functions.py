@@ -1,8 +1,16 @@
 import math
 import time
+from random import randint
 
-def toCode(num):
-	return num % 10000
+def generateCode(codes):
+	while True:
+		code = randint(1000, 9999)
+		if not code in codes:
+			return code
 
 def takeTime():
-	return math.floor(time.time())
+	return time.time()
+
+def getTimeout(end):
+	return end - takeTime()
+
