@@ -47,7 +47,7 @@ def get_members():
 def get_member(id):
 	try:
 		cursor = mysql.connect().cursor(pymysql.cursors.DictCursor)
-		cursor.execute("SELECT attendance_id, attendance_time_in, event_name, event_start, event_end, type_name FROM attendance inner join events on attendance_event_id=event_id inner join types on event_type_id=type_id ")
+		cursor.execute("SELECT attendance_id, attendance_time_in, event_name, event_start, event_end FROM attendance inner join events on attendance_event_id=event_id")
 		rows = cursor.fetchall()
 		resp = jsonify(rows)
 		resp.status_code = 200
@@ -69,7 +69,7 @@ def get_types():
 
 @app.route('/api/cache')
 def get_cache():
-	return goodResp(cache.to_dict())
+	return goodResp(cache)
 
 @app.route('/api/session')
 def get_session():
@@ -88,14 +88,13 @@ def add_event():
 	try:
 		_json = request.json
 		_name = _json['name']
-		_type = _json['type']
 		_start = _json['start'] if 'start' in _json else takeTime()
 		_end = _json['end']
 		_lat = _json['lat']
 		_long = _json['long']
-		if _name and _type and _start and _end and _lat and _long:
-			sql = "INSERT INTO events(event_name, event_type_id, event_start, event_end, event_lat, event_long) VALUES(%s, %s, %s, %s, %s, %s)"
-			data = (_name, _type, _start, _end, _lat, _long)
+		if _name and _start and _end and _lat and _long:
+			sql = "INSERT INTO events(event_name, event_start, event_end, event_lat, event_long) VALUES(%s, %s, %s, %s, %s)"
+			data = (_name, _start, _end, _lat, _long)
 			conn = mysql.connect()
 			cursor = conn.cursor()
 			cursor.execute(sql, data)
@@ -106,7 +105,6 @@ def add_event():
 				"message": "Event added successfully",
 				"code": code
 			}
-			print(cache.get(code))
 			resp = jsonify(message)
 			resp.status_code = 200
 			return resp
@@ -150,10 +148,6 @@ def sign_in():
 		
 		eventId = cache.get(_code)
 		
-		print(eventId, _code,)
-		print(session)
-		print(_lat, _long)
-		
 		if not eventId:
 			return goodResp("This is not a valid event code")
 		
@@ -162,7 +156,7 @@ def sign_in():
 		
 		conn = mysql.connect()
 		cursor = conn.cursor(pymysql.cursors.DictCursor)
-		cursor.execute("SELECT event_start, event_end, event_lat, event_long, type_points FROM events INNER JOIN types ON event_type_id=type_id WHERE event_id=%d" % eventId)
+		cursor.execute("SELECT event_start, event_end, event_lat, event_long FROM events WHERE event_id=%d" % eventId)
 		rows = cursor.fetchall()
 
 		if not rows:
@@ -177,7 +171,6 @@ def sign_in():
 		userCoords = (_lat, _long)
 		eventCoords = (event["event_lat"], event["event_long"])
 		dist = geopy.distance.vincenty(userCoords, eventCoords).miles
-		print(dist)
 		if not (dist <= 0.068):
 			return goodResp("You are not within the event range")
 				
@@ -187,7 +180,6 @@ def sign_in():
 		if rows:
 			return goodResp("You already signed into this event")
 
-		cursor.execute("update members set member_points=member_points+%s where member_id=%s" % (event["type_points"], _id))
 		cursor.execute("insert into attendance (attendance_event_id, attendance_member_id, attendance_time_in) values (%d, %d, %d)" % (eventId, _id, currTime))
 		conn.commit()
 		session[str(eventId)] = True
